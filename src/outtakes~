@@ -1,0 +1,69 @@
+
+///////////////////////////////////////////////
+
+pub struct Tokenizer
+{
+  int_re : Regex,  // to be generated from re_str
+  float_re : Regex,
+  sym_re : Regex,
+  alpha_re : Regex,
+  kw_re    : Regex,
+  str_re   : Regex,
+  pub keywords: String,
+  pub symbols: String,
+}
+impl Tokenizer
+{
+
+//   fn new() -> Tokenizer
+//   {  Tokenizer::default() }
+
+   fn addkeyword(&mut self, kw:&str)
+   {  self.keywords.push('|');
+      self.keywords.push_str(kw);
+      self.kw_re = Regex::new(&self.keywords).unwrap();
+   }
+   fn addsymbol(&mut self, sym:&str)
+   {
+    if sym.len()>1 {
+      self.symbols.push('|');
+      self.symbols.push_str(sym);
+      self.sym_re = Regex::new(&self.symbols).unwrap();
+     }
+   }
+}//impl tokenizer
+
+impl Default for Tokenizer
+{
+  fn default() -> Self
+  {
+     let kws = "if|while|else|let|lambda|for";
+     let syms = "==|<=|>=|!=|::|&&|(||)|-->|[+-*/%&|@#$^~.,;]";
+     Tokenizer {
+        kw_re : Regex::new(kws).unwrap(),
+        sym_re : Regex::new(syms).unwrap(),
+        int_re : Regex::new(r"[+-]??\d+").unwrap(),
+        float_re: Regex::new(r"[+-]??\d*\.\d*").unwrap(),
+        alpha_re: Regex::new(r"[[:alpha:]][[:alnum:]]*").unwrap(),
+        str_re: Regex::new("\"[^\"]\"").unwrap(),
+        keywords: kws.to_owned(),
+        symbols : syms.to_owned(),
+     }
+  }
+}//impl Default
+
+// split by reg. expression, keep splits if not whitespace
+pub fn splitby<'t>(s:&'t str, re:&Regex) 
+{
+   let split:Vec<_> = re.split(s).collect();
+   //let matches = s.match_indices(re);
+}
+
+
+pub fn main2()
+{
+  let input ="abc=123-4*5/1.6 ok [--]";
+  let split_re = Regex::new(r"\*|\s|[-/=.]").unwrap();
+  let split = split_re.split(input).into_iter();
+  for x in split { println!("({})",x); }
+}//main
