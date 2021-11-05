@@ -53,8 +53,9 @@ use crate::Token::*;
 #[derive(Clone,PartialEq,Debug)]
 pub enum Token
 {
-   /// non-negative base-10 integers.
-   /// Negative signs are emitted as separate symbols
+   /// non-negative base-10 integers.  It is however, more convenient to
+   /// capture the value as a signed integer despite the fact that
+   /// negative signs are emitted as separate symbols.
    Integer(i64), /// non-negative base-10 floating-point numbers
    Float(f64),
    /// non-alphanumeric symbols such as "==".  Note that a substring such as
