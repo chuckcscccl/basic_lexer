@@ -1,12 +1,18 @@
-//! basic_lexer is a basic lexical scanner designed for use in as the
+//! basic_lexer is a basic lexical scanner designed for use as the
 //! first stage of compiler construction, and produces tokens required by
-//! a parser.  It is intended to support the parallel project *RustLr*,
-//! which is a LR-style parser generator. 
+//! a parser.  It was originally intended to support the parallel project *RustLr*,
+//! which is a LR-style parser generator, although each project is independent
+//! of the other. It is not intended to be the best possible lexical scanner as it
+//! does not build a DFA from regular expressions.  It does not count white-spaces
+//! so it would not be appropriate for scanning python-like syntax.  However, as
+//! this author did not find a satisfactory solution that suited all his needs,
+//! he was compelled to create his own.  It is a component of a compiler that can
+//! be improved upon modularly.
 //!
 //! The structures [Str_tokenizer] and [File_tokenizer] both implement
 //! [Iterator] and return [Token]s.  File_tokenizer is more full-featured and
 //! recognizes multi-line string literals and multi-line comments, with
-//! the option of keeping the comments as verbatim tokens. The File_tokenizer
+//! the option of keeping the comments as special tokens. The File_tokenizer
 //! is also capable of distinguishing keywords (such as "if", "else", "while")
 //! from other alphanumeric tokens.
 //!
@@ -14,12 +20,14 @@
 //!```ignore
 //!  let mut fscan = File_tokenizer::new("test.c");
 //!  fscan.add_keywords("while return");
+//!  fscan.set_line_comment("//");
 //!  fscan.set_keep_comments(false);
 //!  fscan.set_keep_newline(true);
 //!  while let Some(token) = fscan.next() {
 //!    println!("{:?}, line {}",&token,fscan.line_number());
 //!  }
 //!```
+//! The supplied *main.rs* and file *test.c* contain additional usage examples.
 
 
 
@@ -48,7 +56,11 @@ pub enum Token
    /// non-negative base-10 integers.
    /// Negative signs are emitted as separate symbols
    Integer(i64), /// non-negative base-10 floating-point numbers
-   Float(f64),   /// non-alphanumeric symbols such as "=="
+   Float(f64),
+   /// non-alphanumeric symbols such as "==".  Note that a substring such as
+   /// "=*=" will also be recognized as a single Symbol token, unless one of 
+   /// these characters is designed as a 'singleton' by the
+   /// [File_tokenizer::add_singletons] function.
    Symbol(String),
    /// tokens that must start with a alphabetical character or '\_',
    /// followed an arbitrary number of alphanumeric or '\_' symbols.
@@ -64,7 +76,7 @@ pub enum Token
    /// Verbatim, non-tokenized text such as comments, only produced by
    /// File_tokenizer with the keep_comments option
    Verbatim(String),
-   /// indicate that a new line has been read, only produced by
+   /// indicates that a new line has been read; only produced by
    /// File_tokenizer with the keep_newline option
    Newline,
    #[doc(hidden)]
@@ -353,8 +365,20 @@ impl File_tokenizer
       let ki = kws.split_whitespace();
       for kw in ki { self.keywords.insert(kw.trim().to_owned());}
    }
-   #[doc(hidden)]
-   pub fn add_singleton(&mut self, singles:&str)
+   /// adds characters to be recognized as single-character [Symbol] tokens.
+   /// For example, if '=' is added as a singleton then "==" will be scanned
+   /// as two separate [Symbol]s.  The default singletons are the brackets
+   /// ( ) { } \[ and \].  These characters are always recognized as singleton
+   /// symbols.
+   ///
+   /// Example
+   /// ```ingore
+   /// let mut scanner = File_tokenizer::new("./somefilepath");
+   /// scanner.add_singletons(".*");
+   /// ```
+   /// Each character in the given string will be added to the default singletons.
+   /// White-space and alphanumeric characters are ignored.
+   pub fn add_singletons(&mut self, singles:&str)
    {
       for c in singles.chars() {self.singletons.insert(c);}
    }
@@ -364,7 +388,7 @@ impl File_tokenizer
    pub fn set_line_comment(&mut self, c:&str)
    {if c.len()>0 {self.line_comment=String::from(c.trim());} }
    /// sets the symbols used to delineate possibly multiple-line comments.
-   /// The default comment delimiters are "/\*" and "\*/".  The argument s should
+   /// The default comment delimiters are "/\*" and "\*/".  The argument *s* should
    /// be a whitespace-separated string (e.g. "\/* */").  The function has
    /// no effect if the argument is not of the right form.
    pub fn set_comments(&mut self, s:&str)
@@ -394,7 +418,6 @@ impl File_tokenizer
   let mut index = 0;
   if (s.len()>1 && &s[0..2]==&self.begin_comment[..] && self.mode==Mode::normal) || iscomment(&self.mode) {
      if !iscomment(&self.mode) {self.mode = Mode::comment(self.linenum);}
-     //println!("IN COMMENT MODE, line {}", self.linenum);
      match s.find(&self.end_comment) {
        Some(index) => {
           self.mode=Mode::normal;
@@ -440,7 +463,7 @@ impl File_tokenizer
      else {return (Symbol(first.to_string()),1);}
   }
   else {
-     index = match_symbol(s);
+     index = self.match_symbol(s);
      if index>0 {return (Symbol(String::from(&s[0..index])),index);}
   }
   //(Verbatim(s.to_string()),s.len())  // default
@@ -470,6 +493,25 @@ impl File_tokenizer
    }//while
    if stop {index} else {0}
  } // the stringlit will include the enclosing ""'s - inside File_tokenizer
+
+fn match_symbol(&mut self, s:&str) -> usize
+{
+   if s.len()<1 {return 0;}
+   let mut chars = s.chars();
+   let mut c = chars.next().unwrap();
+   //if isdelim(c) {return 1;}
+   if self.singletons.contains(&c) {return 1;} // special case
+   if c.is_ascii_digit() || c.is_alphanumeric() || c=='_' || c=='\"' || c=='.' {return 0;}
+   let mut index = 1;
+   let mut stop = false;
+   while !stop && index<s.len()
+   {
+     c = chars.next().unwrap();
+     if !c.is_whitespace() && !c.is_ascii_digit() && !c.is_alphanumeric() && c!='_' && c!='\"' && c!='.'
+     {index+=1;} else {stop=true;}
+   }
+   return index;
+}
 
 }//impl File_tokenizer
 

@@ -23,8 +23,9 @@ fn main()
   println!("-----------------");
 
   // testing File_tokenizer
-  let mut fscan = File_tokenizer::new("test.txt");
+  let mut fscan = File_tokenizer::new("test.c");
   fscan.add_keywords("while return");
+  fscan.set_line_comment("//");
   fscan.set_keep_comments(false);
   fscan.set_keep_newline(true);  
   while let Some(token) = fscan.next() {
