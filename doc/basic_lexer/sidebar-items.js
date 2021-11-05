@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Token","Tokens are returned by the iterators [Str_tokenizer] and [File_tokenizer]."]],"struct":[["File_tokenizer","a [Token] [Iterator] on a given file"],["Str_tokenizer","A [Token] [Iterator] on a given &str."]]});

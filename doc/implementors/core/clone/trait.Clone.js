@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["basic_lexer"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.55.0/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> for <a class=\"enum\" href=\"basic_lexer/enum.Token.html\" title=\"enum basic_lexer::Token\">Token</a>","synthetic":false,"types":["basic_lexer::Token"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
