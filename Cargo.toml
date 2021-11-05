@@ -1,11 +1,12 @@
 [package]
 name = "basic_lexer"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 license = "MIT"
 description = "Basic lexical analyzer for use in parsing and compiling"
 repository = "https://github.com/chuckcscccl/basic_lexer/"
 keywords = ["scanner", "tokenizer"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

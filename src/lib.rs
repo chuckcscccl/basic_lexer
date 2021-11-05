@@ -196,7 +196,7 @@ fn match_symbol(s:&str) -> usize
    while !stop && index<s.len()
    {
      c = chars.next().unwrap();
-     if !c.is_whitespace() && !c.is_ascii_digit() && !c.is_alphanumeric() && c!='_' && c!='\"' && c!='.'
+     if !c.is_whitespace() && !c.is_ascii_digit() && !c.is_alphanumeric() && c!='_' && c!='\"' && c!='.' && !isdelim(c)
      {index+=1;} else {stop=true;}
    }
    return index;
@@ -508,7 +508,7 @@ fn match_symbol(&mut self, s:&str) -> usize
    while !stop && index<s.len()
    {
      c = chars.next().unwrap();
-     if !c.is_whitespace() && !c.is_ascii_digit() && !c.is_alphanumeric() && c!='_' && c!='\"' && c!='.'
+     if !c.is_whitespace() && !c.is_ascii_digit() && !c.is_alphanumeric() && c!='_' && c!='\"' && c!='.' && !self.singletons.contains(&c)
      {index+=1;} else {stop=true;}
    }
    return index;

@@ -33,8 +33,8 @@ fn main()
   }
 //  for t in fscan {println!("{:?}",t);}
 //  println!("line number: {}",fscan.line_number);
-
-  let mut scanner = Str_tokenizer::new("while (1+1==2) fork();");
+println!("--------");
+  let mut scanner = Str_tokenizer::new("-5-(4-2)*5");
    while let Some(token) = scanner.next() {
      println!("{:?}",&token);
    }
