@@ -569,7 +569,7 @@ impl Iterator for File_tokenizer
        }
        self.column += ind;
        match return_value {
-         Some(Nothing) if self.current_string.len()>0 => {}, // keep looping
+         Some(Nothing) /*if self.current_string.len()>0*/ => {}, // keep looping
          Some(Newline) if !self.keep_newline => {},
          _ => {break;}
        }
@@ -577,10 +577,6 @@ impl Iterator for File_tokenizer
      return_value
   }//next
 }//impl Iterator for File_tokenizer
-
-
-// currently cannot recognize string literals that span multiple lines...
-// or multi-line comments (less important)
 
 
 // integrate into RustLr:
