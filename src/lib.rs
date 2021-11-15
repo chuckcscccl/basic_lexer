@@ -27,7 +27,7 @@
 //!    println!("{:?}, line {}",&token,fscan.line_number());
 //!  }
 //!```
-//! The supplied *main.rs* and file *test.c* contain additional usage examples.
+//! The supplied *main.rs* and file *test.c* on github contain additional usage examples.
 
 
 
@@ -351,6 +351,11 @@ impl File_tokenizer
    pub fn line_number(&self)->usize {self.linenum}
    /// returns the current column (character position) on the current line
    pub fn column_number(&self)->usize {self.column}
+   /// returns a copy of the current line being tokenized
+   pub fn current_line<'t>(&'t self)-> String
+   {
+        self.line.borrow().clone()
+   }
 
    /// adds keywords that are to be distinguished from other alphanumeric
    /// tokens.  Keywords are returned as [Keyword] tokens.  Keywords
