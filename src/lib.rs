@@ -1,6 +1,6 @@
 //! basic_lexer is a basic lexical scanner designed for the
 //! first stage of compiler construction, and produces tokens required by
-//! a parser.  It was originally intended to support the parallel project *RustLr*,
+//! a parser.  It was originally intended to support the parallel project *[rustlr](https://docs.rs/rustlr/latest/rustlr/)*,
 //! which is a LR-style parser generator, although each project is independent
 //! of the other.
 //!

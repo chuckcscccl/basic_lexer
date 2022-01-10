@@ -23,6 +23,8 @@ pub enum RawToken<'t>
 //  Hex(u64),
   /// floating point number
   Float(f64),
+  /// single character inside single quotes.
+  Char(char), 
   /// String literal, allows for nested quotes
   Strlit(&'t str),
   /// Alphanumeric sequence, staring with an alphabetical character or '_',
@@ -240,8 +242,14 @@ impl<'t> StrTokenizer<'t>
       return Some((Symbol(&self.input[pi..pi+1]),self.line,self.column()-1));
     }
 
-    // look for string literal, keep track of newlines
+    // look for char literal
+    if c=='\'' && pi+2<self.input.len() && &self.input[pi+2..pi+3]=="\'" {
+      self.position = pi+3;
+      let thechar = self.input[pi+1..pi+2].chars().next().unwrap();
+      return Some((Char(thechar),self.line,self.column()-3));
+    }
 
+    // look for string literal, keep track of newlines
     if c=='\"' {
       let mut ci = pi+1;
       while ci<self.input.len()
