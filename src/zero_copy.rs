@@ -11,7 +11,7 @@ use regex::Regex;
 use std::collections::{HashSet};
 use crate::RawToken::*;
 
-/// structure produced by [StrTokenizer]
+/// structure produced by [StrTokenizer].
 #[derive(Debug)]
 pub enum RawToken<'t>
 {
@@ -362,6 +362,10 @@ impl<'t> LexSource<'t>
   /// sets the numerical id of this source.
   pub fn set_id(&mut self, id:usize) {self.id=id;}
   pub fn get_id(&self)->usize {self.id}
+  /// retrieves entire contents of lexsource
+  pub fn get_contents(&self)->&str {&self.contents}
+  /// retrieves original path (such as filename) of this source
+  pub fn get_path(&self)->&str {self.pathname}
 }//impl LexSource
 impl<'t> StrTokenizer<'t>
 {
