@@ -1,35 +1,66 @@
-//! basic_lexer is a basic lexical scanner designed for use as the
+//! basic_lexer is a basic lexical scanner designed for the
 //! first stage of compiler construction, and produces tokens required by
 //! a parser.  It was originally intended to support the parallel project *RustLr*,
 //! which is a LR-style parser generator, although each project is independent
-//! of the other. It is not intended to be the best possible lexical scanner as it
-//! does not build a DFA from regular expressions.  It does not count white-spaces
-//! so it would not be appropriate for scanning python-like syntax.  However, as
-//! this author did not find a satisfactory solution that suited all his needs,
-//! he was compelled to create his own.  It is a component of a compiler that can
-//! be improved upon modularly.
+//! of the other.
 //!
-//! The structures [Str_tokenizer] and [File_tokenizer] both implement
-//! [Iterator] and return [Token]s.  File_tokenizer is more full-featured and
-//! recognizes multi-line string literals and multi-line comments, with
-//! the option of keeping the comments as special tokens. The File_tokenizer
-//! is also capable of distinguishing keywords (such as "if", "else", "while")
-//! from other alphanumeric tokens.
+//! For version 0.2.0, a new "zero-copy" tokenizer has been added, consisting
+//! of [RawToken], [StrTokenizer] and [LexSource]. The most important structure
+//! is [StrTokenizer].  The original tokenizer and related constructs,
+//! which produced tokens containing owned strings, is still present.
+//! However, neither tokenizer is optimal-performance in that they are not built
+//! from DFAs.
+//! The new tokenizing function, [StrTokenizer::next_token], uses [regex](https://docs.rs/regex/latest/regex/), and
+//! now becomes the focus of the crate.  It is now capaple of counting
+//! whitespaces (for Python-like languages) and accurately keeps track of
+//! the starting line/column position of each token.
 //!
-//! Example:
+//! Example: given the *Cargo.toml* file of this crate,
 //!```ignore
-//!  let mut fscan = File_tokenizer::new("test.c");
-//!  fscan.add_keywords("while return");
-//!  fscan.set_line_comment("//");
-//!  fscan.set_keep_comments(false);
-//!  fscan.set_keep_newline(true);
-//!  while let Some(token) = fscan.next() {
-//!    println!("{:?}, line {}",&token,fscan.line_number());
-//!  }
+//!  let source = LexSource::new("Cargo.toml").unwrap();
+//!  let mut tokenizer = StrTokenizer::from_source(&source);
+//!  tokenizer.set_line_comment("#");
+//!  tokenizer.keep_comment=true;
+//!  tokenizer.keep_newline=false;
+//!  tokenizer.keep_whitespace=false; 
+//!  while let Some(token) = tokenizer.next() {
+//!     println!("Token: {:?}",&token);
+//!  } 
 //!```
-//! The supplied *main.rs* and file *test.c* on github contain additional usage examples.
-
-
+//! This code produces output
+//!```
+//! Token: (Symbol("["), 1, 1)
+//! Token: (Alphanum("package"), 1, 2) 
+//! Token: (Symbol("]"), 1, 9)
+//! Token: (Alphanum("name"), 2, 1)
+//! Token: (Symbol("="), 2, 6)
+//! Token: (Strlit("\"basic_lexer\""), 2, 8)
+//! Token: (Alphanum("version"), 3, 1)
+//! Token: (Symbol("="), 3, 9)
+//! Token: (Strlit("\"0.2.0\""), 3, 11)
+//! Token: (Alphanum("edition"), 4, 1)
+//! Token: (Symbol("="), 4, 9)
+//! Token: (Strlit("\"2018\""), 4, 11)
+//! Token: (Alphanum("license"), 5, 1)
+//! Token: (Symbol("="), 5, 9)
+//! Token: (Strlit("\"MIT\""), 5, 11)
+//! Token: (Alphanum("description"), 6, 1)
+//! Token: (Symbol("="), 6, 13)
+//! Token: (Strlit("\"Basic lexical analyzer for parsing and compiling\""), 6, 15)  
+//! Token: (Alphanum("repository"), 7, 1)
+//! Token: (Symbol("="), 7, 12)
+//! Token: (Strlit("\"https://github.com/chuckcscccl/basic_lexer/\""), 7, 14)       
+//! Token: (Alphanum("keywords"), 8, 1)
+//! Token: (Symbol("="), 8, 10)
+//! Token: (Symbol("["), 8, 12)
+//! Token: (Strlit("\"scanner\""), 8, 13)
+//! Token: (Symbol(","), 8, 22)
+//! Token: (Strlit("\"tokenizer\""), 8, 24)
+//! Token: (Symbol("]"), 8, 35)
+//! Token: (Verbatim("# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html"), 10, 1)
+//!```
+//! etc.. The numbers returned alongside each token represent the line and
+//! column positions of the start of the token.
 
 #![allow(dead_code)]
 #![allow(unused_variables)]
@@ -48,6 +79,8 @@ use std::fs::File;
 use std::collections::{HashMap,HashSet};
 use crate::Token::*;
 
+mod zero_copy;
+pub use zero_copy::*;
 
 /// Tokens are returned by the iterators [Str_tokenizer] and [File_tokenizer].
 #[derive(Clone,PartialEq,Debug)]
@@ -63,8 +96,8 @@ pub enum Token
    /// these characters is designed as a 'singleton' by the
    /// [File_tokenizer::add_singletons] function.
    Symbol(String),
-   /// tokens that must start with a alphabetical character or '\_',
-   /// followed an arbitrary number of alphanumeric or '\_' symbols.
+   /// tokens that must start with a alphabetical character or '_',
+   /// followed an arbitrary number of alphanumeric or '_' symbols.
    Alphanum(String),
    /// special keywords such as "if", "else", "while" that are distinguished
    /// from other alphanumeric tokens.  Keywords can be added to
@@ -302,6 +335,25 @@ fn isstringlit(m:&Mode) -> bool
 
 ///////////////////////////
 /// a [Token] [Iterator] on a given file
+///
+/// The structures [Str_tokenizer] and [File_tokenizer] both implement
+/// [Iterator] and return [Token]s.  File_tokenizer is more full-featured and
+/// recognizes multi-line string literals and multi-line comments, with
+/// the option of keeping the comments as special tokens. The File_tokenizer
+/// is also capable of distinguishing keywords (such as "if", "else", "while")
+/// from other alphanumeric tokens.
+///
+/// Example:
+///```ignore
+///  let mut fscan = File_tokenizer::new("test.c");
+///  fscan.add_keywords("while return");
+///  fscan.set_line_comment("//");
+///  fscan.set_keep_comments(false);
+///  fscan.set_keep_newline(true);
+///  while let Some(token) = fscan.next() {
+///    println!("{:?}, line {}",&token,fscan.line_number());
+///  }
+///```
 pub struct File_tokenizer
 { 
   linenum: usize, 
@@ -352,7 +404,7 @@ impl File_tokenizer
    /// returns the current column (character position) on the current line
    pub fn column_number(&self)->usize {self.column}
    /// returns a copy of the current line being tokenized
-   pub fn current_line<'t>(&'t self)-> String
+   pub fn current_line(&self)-> String
    {
         self.line.borrow().clone()
    }
@@ -603,3 +655,5 @@ impl<AT:Default> Lexer<AT> for File_tokenizer
   fn linenum(&self)-> usize { self.linenum }
 }
 */
+
+
