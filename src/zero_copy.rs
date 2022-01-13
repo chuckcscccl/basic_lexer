@@ -75,6 +75,7 @@ pub struct StrTokenizer<'t>
    /// default is false.
    pub keep_comment:bool,
    line_start:usize, // keep starting position of line, for column info
+   src:&'t str,
 }
 impl<'t> StrTokenizer<'t>
 {
@@ -101,7 +102,8 @@ impl<'t> StrTokenizer<'t>
     let ml_comment_end="*/";    
     let keep_comment=false;
     let line_start=0;
-    StrTokenizer{decuint,hexnum,floatp,/*strlit,*/alphan,nonalph,doubles,singles,input,position,keep_whitespace,keep_newline,line,line_comment,ml_comment_start,ml_comment_end,keep_comment,line_start}
+    let src = "";
+    StrTokenizer{decuint,hexnum,floatp,/*strlit,*/alphan,nonalph,doubles,singles,input,position,keep_whitespace,keep_newline,line,line_comment,ml_comment_start,ml_comment_end,keep_comment,line_start,src}
   }// new
   /// adds a symbol of exactly length two. If the length is not two the function
   /// has no effect.  Note that these symbols override all other types except for
@@ -153,7 +155,10 @@ impl<'t> StrTokenizer<'t>
   pub fn column(&self)->usize {self.position-self.line_start+1}
   /// returns the current absolute byte position of the Tokenizer
   pub fn position(&self)-> usize {self.position}
-
+  /// returns the source of the tokenizer such as URL or filename
+  pub fn get_source(&self) -> &str {self.src}
+  pub fn set_source<'u:'t>(&mut self, s:&'u str) {self.src=s;}
+  
   /// returns next token, along with starting line and column numbers.
   /// This function will return None at end of stream or LexError along
   /// with a message printed to stderr if a tokenizer error occured.
@@ -294,17 +299,17 @@ impl<'t> StrTokenizer<'t>
         self.position = mat.end()+pi;  
         return Some((Alphanum(&self.input[pi..self.position]),self.line,pi-self.line_start+1));
     }//alphanums
-    // decimal ints
-    if let Some(mat) = self.decuint.find(&self.input[pi..]) {
-        self.position = mat.end()+pi;  
-        return Some((Num(self.input[pi..self.position].parse::<i64>().unwrap()),self.line,pi-self.line_start+1));
-    }//decuint
+
     // floats
     if let Some(mat) = self.floatp.find(&self.input[pi..]) {
         self.position = mat.end()+pi;
         return Some((Float(self.input[pi..self.position].parse::<f64>().unwrap()),self.line,pi-self.line_start+1));
     }//floatp
-
+    // decimal ints
+    if let Some(mat) = self.decuint.find(&self.input[pi..]) {
+        self.position = mat.end()+pi;  
+        return Some((Num(self.input[pi..self.position].parse::<i64>().unwrap()),self.line,pi-self.line_start+1));
+    }//decuint
     //check for unclosed string
     if pi<self.input.len() && &self.input[pi..pi+1]=="\"" {
         self.position = self.input.len();
@@ -346,7 +351,6 @@ pub struct LexSource<'t>
 {
    pathname:&'t str,
    contents:String,
-   id:usize,
 }
 impl<'t> LexSource<'t>
 {
@@ -360,16 +364,15 @@ impl<'t> LexSource<'t>
        Ok(st) => {
          Ok(LexSource {
            pathname:path,
-           id:0,
            contents:st,
          })
        },
        Err(e) => {Err(e)}
      }//match
   }//new
-  /// sets the numerical id of this source.
-  pub fn set_id(&mut self, id:usize) {self.id=id;}
-  pub fn get_id(&self)->usize {self.id}
+//  /// sets the numerical id of this source.
+//  pub fn set_id(&mut self, id:usize) {self.id=id;}
+//  pub fn get_id(&self)->usize {self.id}
   /// retrieves entire contents of lexsource
   pub fn get_contents(&self)->&str {&self.contents}
   /// retrieves original path (such as filename) of this source

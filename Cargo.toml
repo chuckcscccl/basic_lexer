@@ -1,6 +1,6 @@
 [package]
 name = "basic_lexer"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2018"
 license = "MIT"
 description = "Basic lexical analyzer for parsing and compiling"
